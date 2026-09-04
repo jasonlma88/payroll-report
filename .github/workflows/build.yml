@@ -87,9 +87,17 @@ jobs:
         shell: bash
         run: |
           # Published on the release so anyone can verify their download.
+          # The Windows runner has sha256sum but not shasum, and a failed
+          # redirect still creates an empty file that the release API rejects.
           for f in ${{ matrix.artifact }}.zip ${{ matrix.artifact }}.tar.gz; do
-            [ -f "$f" ] && shasum -a 256 "$f" > "$f.sha256" && cat "$f.sha256"
-          done || true
+            [ -f "$f" ] || continue
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$f" > "$f.sha256"
+            else
+              shasum -a 256 "$f" > "$f.sha256"
+            fi
+            if [ -s "$f.sha256" ]; then cat "$f.sha256"; else rm -f "$f.sha256"; fi
+          done
 
       - uses: actions/upload-artifact@v4
         with:
