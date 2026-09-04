@@ -17,7 +17,7 @@ import traceback
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, font as tkfont, messagebox, ttk
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from contracts import advisories, errors, validate_all  # noqa: E402
@@ -85,7 +85,8 @@ class PayrollApp:
         self.running = False
 
         root.title(APP_TITLE)
-        root.minsize(620, 420)
+        root.minsize(560, 480)
+        root.geometry("640x560")
 
         self.input_var = tk.StringVar(value=self.prefs.get("input", ""))
         self.output_var = tk.StringVar(
@@ -99,63 +100,98 @@ class PayrollApp:
 
     # -- layout ------------------------------------------------------------
     def _build(self, root: tk.Tk) -> None:
-        pad = {"padx": 14, "pady": 6}
-        frame = ttk.Frame(root, padding=16)
-        frame.pack(fill="both", expand=True)
-        frame.columnconfigure(1, weight=1)
+        # Derive every font from the system default so the window looks native
+        # on each platform instead of guessing point sizes.
+        base = tkfont.nametofont("TkDefaultFont")
+        bold = base.copy()
+        bold.configure(weight="bold")
+        small = base.copy()
+        small.configure(size=max(base.cget("size") - 1, 9))
 
-        ttk.Label(frame, text="Timesheet file", font=("", 12, "bold")).grid(
-            row=0, column=0, sticky="w", **pad
+        outer = ttk.Frame(root, padding=(18, 16))
+        outer.pack(fill="both", expand=True)
+        outer.columnconfigure(1, weight=1)
+
+        # --- the two choices ------------------------------------------------
+        ttk.Label(outer, text="Timesheet file", font=bold).grid(
+            row=0, column=0, sticky="w", pady=(0, 2)
         )
-        ttk.Entry(frame, textvariable=self.input_var).grid(row=0, column=1, sticky="ew", **pad)
-        ttk.Button(frame, text="Choose…", command=self.pick_input).grid(row=0, column=2, **pad)
-
-        ttk.Label(frame, text="Save report to", font=("", 12, "bold")).grid(
-            row=1, column=0, sticky="w", **pad
+        ttk.Entry(outer, textvariable=self.input_var).grid(
+            row=1, column=0, columnspan=2, sticky="ew", padx=(0, 8)
         )
-        ttk.Entry(frame, textvariable=self.output_var).grid(row=1, column=1, sticky="ew", **pad)
-        ttk.Button(frame, text="Choose…", command=self.pick_output).grid(row=1, column=2, **pad)
+        ttk.Button(outer, text="Choose…", command=self.pick_input).grid(row=1, column=2)
 
-        self.run_btn = ttk.Button(frame, text="Create Report", command=self.run)
-        self.run_btn.grid(row=2, column=1, sticky="e", padx=14, pady=(12, 6))
+        ttk.Label(outer, text="Save the report into", font=bold).grid(
+            row=2, column=0, sticky="w", pady=(14, 2)
+        )
+        ttk.Entry(outer, textvariable=self.output_var).grid(
+            row=3, column=0, columnspan=2, sticky="ew", padx=(0, 8)
+        )
+        ttk.Button(outer, text="Choose…", command=self.pick_output).grid(row=3, column=2)
 
+        # --- the one action --------------------------------------------------
+        actions = ttk.Frame(outer)
+        actions.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(18, 4))
+        actions.columnconfigure(0, weight=1)
+
+        self.run_btn = ttk.Button(
+            actions, text="Create Report", command=self.run, default="active"
+        )
+        self.run_btn.grid(row=0, column=1)
+        root.bind("<Return>", lambda _e: self.run())
+        root.bind("<KP_Enter>", lambda _e: self.run())
         self.reveal_btn = ttk.Button(
-            frame, text=REVEAL_LABEL, command=self.show_output, state="disabled"
+            actions, text=REVEAL_LABEL, command=self.show_output, state="disabled"
         )
-        self.reveal_btn.grid(row=2, column=2, pady=(12, 6), padx=14)
+        self.reveal_btn.grid(row=0, column=2, padx=(8, 0))
 
-        self.test_btn = ttk.Button(frame, text="Self-test", command=self.self_test, width=9)
-        self.test_btn.grid(row=2, column=0, sticky="w", padx=14, pady=(12, 6))
+        ttk.Separator(outer).grid(row=5, column=0, columnspan=3, sticky="ew", pady=(10, 10))
 
-        ttk.Separator(frame).grid(row=3, column=0, columnspan=3, sticky="ew", pady=8)
-
-        ttk.Label(frame, textvariable=self.status_var, wraplength=560, justify="left").grid(
-            row=4, column=0, columnspan=3, sticky="w", padx=14
+        self.status_label = ttk.Label(
+            outer, textvariable=self.status_var, justify="left", font=bold
+        )
+        self.status_label.grid(row=6, column=0, columnspan=3, sticky="w")
+        # Wrap to the real width instead of a hardcoded guess.
+        outer.bind(
+            "<Configure>",
+            lambda e: self.status_label.configure(wraplength=max(e.width - 40, 200)),
         )
 
-        log_frame = ttk.Frame(frame)
-        log_frame.grid(row=5, column=0, columnspan=3, sticky="nsew", padx=14, pady=(8, 0))
-        frame.rowconfigure(5, weight=1)
+        # --- results ----------------------------------------------------------
+        log_frame = ttk.Frame(outer)
+        log_frame.grid(row=7, column=0, columnspan=3, sticky="nsew", pady=(8, 0))
+        outer.rowconfigure(7, weight=1)
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
 
-        # Inherit the theme's colours rather than forcing light grey, which
-        # turns into unreadable dark-on-dark under a dark system theme.
         try:
-            bg = ttk.Style().lookup("TFrame", "background") or "#f6f6f8"
+            bg = ttk.Style().lookup("TEntry", "fieldbackground") or "#ffffff"
         except tk.TclError:
-            bg = "#f6f6f8"
-        self.log = tk.Text(log_frame, height=12, wrap="word", state="disabled",
-                           relief="flat", background=bg,
-                           font=("Consolas" if sys.platform.startswith("win") else "Menlo"
-                                 if sys.platform == "darwin" else "monospace", 11))
+            bg = "#ffffff"
+        try:
+            fg = ttk.Style().lookup("TLabel", "foreground") or "#000000"
+        except tk.TclError:
+            fg = "#000000"
+
+        self.log = tk.Text(
+            log_frame, height=10, wrap="word", state="disabled", relief="flat",
+            background=bg, foreground=fg, borderwidth=0, highlightthickness=0,
+            padx=10, pady=8, font=base,
+        )
         self.log.grid(row=0, column=0, sticky="nsew")
         scroll = ttk.Scrollbar(log_frame, command=self.log.yview)
         scroll.grid(row=0, column=1, sticky="ns")
         self.log.configure(yscrollcommand=scroll.set)
-        self.log.tag_configure("warn", foreground="#9a6700")
-        self.log.tag_configure("error", foreground="#b42318")
-        self.log.tag_configure("ok", foreground="#116329")
+        # Light-theme colours are too dark to read on a dark background, so
+        # pick the palette from the pane's actual background.
+        if is_dark(bg, root):
+            warn, error, ok, dim = "#e8b339", "#ff8b7d", "#5fd08a", "#9aa0ad"
+        else:
+            warn, error, ok, dim = "#9a6700", "#b42318", "#116329", "#6b6f7a"
+        self.log.tag_configure("warn", foreground=warn)
+        self.log.tag_configure("error", foreground=error)
+        self.log.tag_configure("ok", foreground=ok)
+        self.log.tag_configure("dim", foreground=dim)
 
         # On macOS, a file dropped on the Dock icon arrives through this.
         if sys.platform == "darwin":
@@ -209,39 +245,12 @@ class PayrollApp:
             self.output_var.set(chosen)
             self._refresh_run_state()
 
-    def self_test(self) -> None:
-        """Run the engine's own checks and print them into the log pane."""
-        self.clear_log()
-        self.status_var.set("Running self-test…")
-        self.say("Checking that this copy of Payroll Report works correctly.\n")
-        self.root.update_idletasks()
-        try:
-            import selftest
-
-            selftest.set_output(lambda line: (self.say(line), self.root.update_idletasks()))
-            failed = selftest.main()
-        except Exception:
-            self.say(traceback.format_exc(), "error")
-            self.status_var.set("Self-test could not run.")
-            return
-        finally:
-            try:
-                selftest.set_output(print)
-            except Exception:
-                pass
-        if failed:
-            self.say("\nSomething is wrong with this copy — do not rely on it.", "error")
-            self.status_var.set("Self-test FAILED.")
-        else:
-            self.say("\nEverything checks out.", "ok")
-            self.status_var.set("Self-test passed.")
-
     def show_output(self) -> None:
         if self.last_output and self.last_output.exists():
             reveal(self.last_output)
 
     def run(self) -> None:
-        if self.running:
+        if self.running or str(self.run_btn["state"]) == "disabled":
             return
         source = safe_path(self.input_var.get().strip())
         target = safe_path(self.output_var.get().strip())
@@ -339,6 +348,37 @@ class PayrollApp:
         self._refresh_run_state()
 
 
+def pick_theme(root: tk.Tk) -> None:
+    """Use each platform's best-looking ttk theme.
+
+    macOS and Windows default to a native theme already. Linux defaults to
+    'clam' only sometimes; the alternatives ('alt', 'default', 'classic') look
+    like Motif from 1995, so choose explicitly.
+    """
+    style = ttk.Style(root)
+    available = set(style.theme_names())
+    for preferred in (
+        ["aqua"] if sys.platform == "darwin"
+        else ["vista", "winnative"] if sys.platform.startswith("win")
+        else ["clam"]
+    ):
+        if preferred in available:
+            try:
+                style.theme_use(preferred)
+            except tk.TclError:
+                continue
+            break
+
+
+def is_dark(colour: str, root: tk.Tk) -> bool:
+    """True if a Tk colour is dark enough to need light text on top."""
+    try:
+        r, g, b = root.winfo_rgb(colour)                # 16-bit per channel
+    except tk.TclError:
+        return False
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 65535 < 0.5
+
+
 def enable_hidpi() -> None:
     """Stop the window looking blurry on high-density Windows displays."""
     if not sys.platform.startswith("win"):
@@ -354,17 +394,60 @@ def enable_hidpi() -> None:
             pass
 
 
-def main() -> None:
-    if "--selftest" in sys.argv[1:]:
-        import selftest
+def smoke_test() -> int:
+    """One end-to-end conversion, so CI can prove the built binary actually runs.
 
-        sys.exit(selftest.main())
+    This is a health check, not the test suite: the tests live in selftest.py
+    and fuzz.py and run before the binary is ever built.
+    """
+    import tempfile
+
+    from openpyxl import Workbook
+
+    with tempfile.TemporaryDirectory() as raw:
+        source = Path(raw) / "smoke.xlsx"
+        book = Workbook()
+        sheet = book.active
+        for row in (
+            ["Payroll Report", None, None, None],
+            ["8/9/26 - 8/22/26", None, None, None],
+            [None, None, None, None],
+            ["Person", "Description", "Project", "Hours"],
+            ["Test Person", None, None, 80],
+            [None, "Worked Time", None, 80],
+            [None, None, "CD-SICK Sick Leave", 8],
+            [None, None, "ACME-1 Project", 72],
+        ):
+            sheet.append(row)
+        book.save(source)
+
+        result = process_timesheet(source)
+        written = save_report(result, Path(raw) / "out.xlsx", overwrite=True)
+        row = result.rows[0]
+        ok = (
+            len(result.rows) == 1
+            and row["Sick Leave"] == 8
+            and row["Work Hours"] == 72
+            and row["Personal Total"] == 80
+            and written.exists()
+            and not errors(validate_all(result))
+        )
+    print("smoke test: " + ("OK" if ok else "FAILED"))
+    return 0 if ok else 1
+
+
+def main() -> None:
+    if "--smoke" in sys.argv[1:]:
+        sys.exit(smoke_test())
 
     enable_hidpi()
     root = tk.Tk()
+    pick_theme(root)
+    # No manual "tk scaling" call: macOS and Windows both report the right
+    # scaling already, and overriding it made every widget ~40% oversized.
     if sys.platform == "darwin":
         try:
-            root.call("tk", "scaling", 1.4)
+            root.call("::tk::unsupported::MacWindowStyle", "style", root, "document")
         except tk.TclError:
             pass
     PayrollApp(root)

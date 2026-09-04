@@ -33,6 +33,9 @@ SYSTEM = platform.system()
 EXCLUDES = [
     "pandas", "numpy", "matplotlib", "scipy", "PIL", "IPython", "jedi",
     "pytest", "setuptools", "pip", "lib2to3", "pydoc_data", "sqlite3",
+    # The test suite and the fuzzer are development tools; they run before the
+    # build and are deliberately not shipped inside the application.
+    "selftest", "fuzz", "make_example",
     "test", "unittest", "distutils", "email", "http", "xmlrpc",
 ]
 
@@ -84,7 +87,6 @@ def main() -> int:
         "--name", "Payroll Report" if SYSTEM in ("Darwin", "Windows") else "payroll-report",
         # payroll_core is imported at runtime from the frozen bundle, so name it.
         "--hidden-import", "payroll_core",
-        "--hidden-import", "selftest",
         "--hidden-import", "contracts",
         "--paths", str(HERE),
     ]

@@ -23,9 +23,9 @@ Then:
 2. **Choose…** the folder to save the report in
 3. **Create Report**
 
-It remembers both choices for next time. **Show in Finder / Show in Explorer** opens the
-result. **Self-test** confirms the app is working correctly — press it if a report ever
-looks wrong.
+It remembers both choices for next time, and **Show in Finder / Show in Explorer**
+opens the result. Every release publishes `.sha256` files if you want to verify a
+download.
 
 ### The one-time security prompt
 
@@ -84,7 +84,11 @@ python3 -m venv .buildenv && .buildenv/bin/pip install openpyxl pyinstaller
 .buildenv/bin/python build.py        # -> dist/
 ```
 
-`build.py` runs the self-test first and refuses to build if anything fails.
+`build.py` runs the self-test and the fuzzer first and refuses to build if anything
+fails. `selftest.py`, `fuzz.py` and `make_example.py` are explicitly excluded from the
+bundle: they are development tools, and a shipped application should contain the
+application, not its test suite. CI additionally runs the built binary with `--smoke`,
+a single end-to-end conversion that proves the executable itself works.
 
 **PyInstaller cannot cross-compile** — a Windows `.exe` has to be built on Windows.
 `.github/workflows/build.yml` builds all four targets on GitHub's runners; push a `v*`
@@ -105,7 +109,7 @@ every release open. Two commented-out lines in the matrix restore it if anyone n
 | `payroll_core.py` | The engine: read, categorize, verify, write. No UI, no printing. |
 | `payroll_gui.py` | The window. Also the frozen app's entry point. |
 | `payroll_processor.py` | The command-line front end. |
-| `selftest.py` | 26 checks, runnable from the command line or the Self-test button. |
+| `selftest.py` | Correctness checks. A development tool — not shipped in the app. |
 | `build.py` | Builds the standalone app for the current platform. |
 | `make_example.py` | Builds the synthetic example workbooks. |
 | `contracts.py` | Output contracts — what downstream systems require. |

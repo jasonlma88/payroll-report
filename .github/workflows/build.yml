@@ -35,7 +35,7 @@ jobs:
 
       - name: Install tkinter (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y python3-tk
+        run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb
 
       - name: Install dependencies
         run: python -m pip install --upgrade pip openpyxl pyinstaller
@@ -48,6 +48,21 @@ jobs:
 
       - name: Build
         run: python build.py
+
+      # The tests above run against the source. This proves the *binary* runs.
+      - name: Smoke-test the built app (macOS)
+        if: runner.os == 'macOS'
+        run: "'dist/Payroll Report.app/Contents/MacOS/Payroll Report' --smoke"
+
+      - name: Smoke-test the built app (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          & "dist/Payroll Report.exe" --smoke
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Smoke-test the built app (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ./dist/payroll-report --smoke
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
@@ -64,12 +79,21 @@ jobs:
         if: runner.os == 'Linux'
         run: cd dist && tar czf "../${{ matrix.artifact }}.tar.gz" payroll-report
 
+      - name: Checksums
+        shell: bash
+        run: |
+          # Published on the release so anyone can verify their download.
+          for f in ${{ matrix.artifact }}.zip ${{ matrix.artifact }}.tar.gz; do
+            [ -f "$f" ] && shasum -a 256 "$f" > "$f.sha256" && cat "$f.sha256"
+          done || true
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
             ${{ matrix.artifact }}.zip
             ${{ matrix.artifact }}.tar.gz
+            ${{ matrix.artifact }}.*.sha256
           if-no-files-found: error
 
   release:
@@ -94,7 +118,15 @@ jobs:
             - **Windows 10/11** — `Payroll-Report-Windows.zip`
             - **Linux** — `Payroll-Report-Linux.tar.gz`
 
-            First launch on macOS: right-click the app and choose **Open**, then
-            **Open** again. Windows may show "Windows protected your PC" — click
-            **More info** > **Run anyway**. Both happen because the app is not
-            code-signed with a paid certificate; they appear once, not every time.
+            **First launch shows a one-time security warning**, because the app is
+            not signed with a paid certificate. It appears once per computer.
+
+            - **macOS 15 and later** — double-click, let it be blocked, then go to
+              **System Settings > Privacy & Security**, scroll to **Security**, and
+              click **Open Anyway**. (On macOS 14 and earlier: right-click > **Open**.)
+            - **Windows** — **More info** > **Run anyway**.
+
+            Copying the app from a file share or USB drive instead of downloading it
+            avoids the warning entirely.
+
+            `.sha256` files are included if you want to verify your download.
