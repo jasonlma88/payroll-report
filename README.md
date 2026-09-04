@@ -32,14 +32,29 @@ looks wrong.
 
 Neither build is signed with a paid developer certificate, so each OS asks once:
 
-- **macOS** — "cannot be opened because it is from an unidentified developer."
-  Right-click (or Control-click) the app → **Open** → **Open**. Only needed the first time.
+- **macOS** — the app "cannot be opened because Apple cannot check it for malicious software."
+  On **macOS 15 (Sequoia) and later** the old right-click → Open shortcut no longer works.
+  Double-click the app once and let it be blocked, then go to
+  **System Settings → Privacy & Security**, scroll to the **Security** section, and click
+  **Open Anyway** next to the message about Payroll Report. Authenticate, then confirm.
+  On **macOS 14 and earlier**, right-click (or Control-click) the app → **Open** → **Open**.
 - **Windows** — "Windows protected your PC."
   **More info** → **Run anyway**. Only needed the first time.
 
-To remove these prompts permanently you would need an Apple Developer ID ($99/yr) and a
-Windows code-signing certificate; the build already ad-hoc signs on macOS, which is what
-stops the harsher "app is damaged" error.
+Either way it is once per machine, not once per report.
+
+**Avoiding the prompt entirely.** Both warnings are triggered by a "downloaded from the
+internet" flag (`com.apple.quarantine` on macOS, Mark-of-the-Web on Windows) that the
+*browser* attaches — not by anything in the app. A copy that never came from a browser
+never gets flagged. So if you put the app on the company file share and people copy it
+from there, neither prompt appears at all. Note that AirDrop and email attachments **do**
+set the flag; a mounted network share, a USB drive, or `scp` do not.
+
+**Removing it properly** costs money: an Apple Developer ID ($99/yr) to sign and notarize
+the Mac build, and a Windows code-signing certificate for the .exe — and an ordinary (OV)
+Windows certificate still shows SmartScreen until it builds download reputation, so only
+an EV certificate ($400+/yr, hardware token) silences it immediately. For an internal tool
+used by a handful of people, the file-share route above is the better trade.
 
 ### Keeping it handy
 

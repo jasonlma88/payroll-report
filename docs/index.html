@@ -84,7 +84,7 @@
   <div class="card warn" id="gate">
     <p><strong>The first time you open it, your computer will warn you.</strong>
        This is expected — the app is not signed with a paid certificate.
-       It happens once, not every time.</p>
+       It happens once per computer, not every time you run it.</p>
     <p id="gate-how"></p>
   </div>
 
@@ -148,9 +148,13 @@
     } else if (key === "linux") {
       how.innerHTML = 'Make it executable first: <kbd>chmod +x payroll-report</kbd>';
     } else {
-      how.innerHTML = 'macOS will say the app is from an <em>unidentified developer</em>. ' +
-                      'Right-click (or Control-click) the app, choose <kbd>Open</kbd>, ' +
-                      'then <kbd>Open</kbd> again.';
+      how.innerHTML =
+        'macOS will say it <em>cannot check the app for malicious software</em>. ' +
+        'Double-click it once and let it be blocked, then open ' +
+        '<kbd>System Settings</kbd> \u2192 <kbd>Privacy &amp; Security</kbd>, scroll to ' +
+        '<strong>Security</strong>, and click <kbd>Open Anyway</kbd>. ' +
+        '<br><br>On macOS 14 and earlier, right-click the app and choose ' +
+        '<kbd>Open</kbd> instead.';
     }
   }
 
