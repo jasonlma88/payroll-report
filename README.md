@@ -14,7 +14,6 @@ double-click it. There is nothing to install — no Python, no pip, no dependenc
 | Your machine | Download |
 | --- | --- |
 | Mac (Apple Silicon — M1/M2/M3/M4) | `Payroll-Report-macOS-arm64.zip` |
-| Mac (Intel) | `Payroll-Report-macOS-intel.zip` |
 | Windows 10 / 11 | `Payroll-Report-Windows.zip` |
 | Linux | `Payroll-Report-Linux.tar.gz` |
 
@@ -95,9 +94,9 @@ tag and it attaches them to a release:
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
-That is the practical way to ship Windows and Linux builds from a Mac. Each build takes
-about 90 seconds, but the `macos-13` (Intel) runner pool is small and often queues for
-10–30 minutes; drop that row from the matrix if nobody needs an Intel Mac build.
+That is the practical way to ship Windows and Linux builds from a Mac. Each build takes about 90 seconds. There is deliberately **no Intel Mac build**: the
+`macos-13` runner pool is tiny and the job repeatedly never got scheduled at all, holding
+every release open. Two commented-out lines in the matrix restore it if anyone needs one.
 
 ### Files
 

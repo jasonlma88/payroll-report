@@ -100,8 +100,6 @@
   var BUILDS = {
     mac_arm:   { file: "Payroll-Report-macOS-arm64.zip", label: "Download for Mac",
                  note: "Apple Silicon — M1, M2, M3, M4" },
-    mac_intel: { file: "Payroll-Report-macOS-intel.zip", label: "Download for Mac",
-                 note: "Intel Mac" },
     windows:   { file: "Payroll-Report-Windows.zip",     label: "Download for Windows",
                  note: "Windows 10 and 11" },
     linux:     { file: "Payroll-Report-Linux.tar.gz",    label: "Download for Linux",
@@ -161,16 +159,7 @@
   var guess = detect();
   render(guess || "mac_arm");
 
-  // Chromium can tell Apple Silicon from Intel; Safari cannot, so the Intel
-  // build stays visible in the list either way.
-  if (guess === "mac_arm" && navigator.userAgentData &&
-      navigator.userAgentData.getHighEntropyValues) {
-    navigator.userAgentData.getHighEntropyValues(["architecture"]).then(function (info) {
-      if (info && info.architecture && info.architecture.indexOf("arm") === -1) {
-        render("mac_intel");
-      }
-    }).catch(function () {});
-  }
+  // No Intel Mac build is published; see .github/workflows/build.yml.
 })();
 </script>
 </body>

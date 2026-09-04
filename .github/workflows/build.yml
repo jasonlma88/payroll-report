@@ -14,8 +14,12 @@ jobs:
         include:
           - os: macos-latest      # Apple Silicon
             artifact: Payroll-Report-macOS-arm64
-          - os: macos-13          # Intel
-            artifact: Payroll-Report-macOS-intel
+          # macos-13 (Intel) is intentionally absent: GitHub's free Intel-Mac
+          # runner pool is tiny and the job routinely never gets scheduled,
+          # holding the whole release open. Restore the two lines below if
+          # anyone actually needs an Intel build.
+          #   - os: macos-13
+          #     artifact: Payroll-Report-macOS-intel
           - os: windows-latest
             artifact: Payroll-Report-Windows
           - os: ubuntu-22.04      # oldest supported glibc, for portability
@@ -87,7 +91,6 @@ jobs:
             No Python or other installation needed.
 
             - **macOS (Apple Silicon)** — `Payroll-Report-macOS-arm64.zip`
-            - **macOS (Intel)** — `Payroll-Report-macOS-intel.zip`
             - **Windows 10/11** — `Payroll-Report-Windows.zip`
             - **Linux** — `Payroll-Report-Linux.tar.gz`
 
