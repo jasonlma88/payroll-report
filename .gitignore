@@ -1,0 +1,15 @@
+.buildenv/
+build/
+dist/
+__pycache__/
+*.pyc
+*.spec
+~$*.xlsx
+Payroll_20*.xlsx
+
+# Real payroll data — never commit. The synthetic example_*.xlsx files, built
+# by make_example.py, are what the tests and the repo use.
+PayrollReportExample.xlsx
+Payroll_example.xlsx
+*.iif
+fuzz-failure-*.xlsx

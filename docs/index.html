@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll Report — Download</title>
+<style>
+  :root {
+    --bg: #f7f7f9; --card: #fff; --ink: #16161a; --muted: #5c5f6b;
+    --line: #e2e3e8; --accent: #2f5fe0; --accent-ink: #fff; --warn-bg: #fff8e6;
+    --warn-line: #e8d9a8; --warn-ink: #6b5310;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151a; --card: #1c1e25; --ink: #f2f3f7; --muted: #a2a6b4;
+      --line: #2c2f39; --accent: #6a8dff; --accent-ink: #10131c;
+      --warn-bg: #2a2312; --warn-line: #4d431f; --warn-ink: #e6d29a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 20px 80px; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 32px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px; margin-bottom: 20px;
+  }
+  .dl {
+    display: block; width: 100%; text-align: center; padding: 18px 24px;
+    background: var(--accent); color: var(--accent-ink); text-decoration: none;
+    border-radius: 10px; font-size: 18px; font-weight: 600;
+  }
+  .dl:hover { filter: brightness(1.08); }
+  .dl small { display: block; font-weight: 400; font-size: 13px; opacity: .85; margin-top: 4px; }
+  .others { margin: 18px 0 0; padding: 0; list-style: none;
+            font-size: 14px; color: var(--muted); }
+  .others li { display: inline-block; margin: 0 14px 6px 0; }
+  .others a { color: var(--muted); }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em;
+       color: var(--muted); margin: 0 0 14px; }
+  ol { margin: 0; padding-left: 22px; }
+  ol li { margin-bottom: 8px; }
+  .warn {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink);
+    border-radius: 10px; padding: 18px 22px; font-size: 15px;
+  }
+  .warn p { margin: 0 0 10px; }
+  .warn p:last-child { margin: 0; }
+  kbd {
+    background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 6px; font-size: 13px; font-family: ui-monospace, monospace;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 32px; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Payroll Report</h1>
+  <p class="sub">Turns a timesheet export into a per-employee payroll report.
+     Nothing to install.</p>
+
+  <div class="card">
+    <a class="dl" id="dl" href="https://github.com/jasonlma88/payroll-report/releases/latest">
+      Download
+      <small id="dl-note">Choose your version</small>
+    </a>
+    <ul class="others" id="others"></ul>
+  </div>
+
+  <div class="card">
+    <h2>How to use it</h2>
+    <ol>
+      <li>Unzip the download and double-click <strong>Payroll Report</strong>.</li>
+      <li>Choose the timesheet file.</li>
+      <li>Choose the folder to save the report in, then press <strong>Create Report</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="card warn" id="gate">
+    <p><strong>The first time you open it, your computer will warn you.</strong>
+       This is expected — the app is not signed with a paid certificate.
+       It happens once, not every time.</p>
+    <p id="gate-how"></p>
+  </div>
+
+  <footer>
+    <a href="https://github.com/jasonlma88/payroll-report">Source code</a> ·
+    Press <strong>Self-test</strong> inside the app to check it is working
+  </footer>
+</main>
+
+<script>
+(function () {
+  var BASE = "https://github.com/jasonlma88/payroll-report/releases/latest/download/";
+  var BUILDS = {
+    mac_arm:   { file: "Payroll-Report-macOS-arm64.zip", label: "Download for Mac",
+                 note: "Apple Silicon — M1, M2, M3, M4" },
+    mac_intel: { file: "Payroll-Report-macOS-intel.zip", label: "Download for Mac",
+                 note: "Intel Mac" },
+    windows:   { file: "Payroll-Report-Windows.zip",     label: "Download for Windows",
+                 note: "Windows 10 and 11" },
+    linux:     { file: "Payroll-Report-Linux.tar.gz",    label: "Download for Linux",
+                 note: "64-bit x86" }
+  };
+
+  var ua = navigator.userAgent || "";
+  var platform = (navigator.userAgentData && navigator.userAgentData.platform) ||
+                 navigator.platform || "";
+
+  function detect() {
+    if (/Win/i.test(platform) || /Windows/i.test(ua)) return "windows";
+    if (/Mac/i.test(platform) || /Mac OS X/i.test(ua)) return "mac_arm";
+    if (/Linux|X11/i.test(platform) || /Linux/i.test(ua)) return "linux";
+    return null;
+  }
+
+  function render(key) {
+    var build = BUILDS[key];
+    if (build) {
+      var link = document.getElementById("dl");
+      link.href = BASE + build.file;
+      link.childNodes[0].nodeValue = build.label + " ";
+      document.getElementById("dl-note").textContent = build.note;
+    }
+    // Every other build stays one click away.
+    var list = document.getElementById("others");
+    list.innerHTML = "";
+    Object.keys(BUILDS).forEach(function (other) {
+      if (other === key) return;
+      var item = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = BASE + BUILDS[other].file;
+      a.textContent = BUILDS[other].label.replace("Download for ", "") +
+                      " (" + BUILDS[other].note + ")";
+      item.appendChild(a);
+      list.appendChild(item);
+    });
+
+    var how = document.getElementById("gate-how");
+    if (key === "windows") {
+      how.innerHTML = 'Windows will say <em>"Windows protected your PC"</em>. ' +
+                      'Click <kbd>More info</kbd>, then <kbd>Run anyway</kbd>.';
+    } else if (key === "linux") {
+      how.innerHTML = 'Make it executable first: <kbd>chmod +x payroll-report</kbd>';
+    } else {
+      how.innerHTML = 'macOS will say the app is from an <em>unidentified developer</em>. ' +
+                      'Right-click (or Control-click) the app, choose <kbd>Open</kbd>, ' +
+                      'then <kbd>Open</kbd> again.';
+    }
+  }
+
+  var guess = detect();
+  render(guess || "mac_arm");
+
+  // Chromium can tell Apple Silicon from Intel; Safari cannot, so the Intel
+  // build stays visible in the list either way.
+  if (guess === "mac_arm" && navigator.userAgentData &&
+      navigator.userAgentData.getHighEntropyValues) {
+    navigator.userAgentData.getHighEntropyValues(["architecture"]).then(function (info) {
+      if (info && info.architecture && info.architecture.indexOf("arm") === -1) {
+        render("mac_intel");
+      }
+    }).catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

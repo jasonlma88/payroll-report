@@ -1,0 +1,97 @@
+name: Build Payroll Report
+
+# PyInstaller cannot cross-compile, so each platform builds on its own runner.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest      # Apple Silicon
+            artifact: Payroll-Report-macOS-arm64
+          - os: macos-13          # Intel
+            artifact: Payroll-Report-macOS-intel
+          - os: windows-latest
+            artifact: Payroll-Report-Windows
+          - os: ubuntu-22.04      # oldest supported glibc, for portability
+            artifact: Payroll-Report-Linux
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tkinter (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y python3-tk
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip openpyxl pyinstaller
+
+      - name: Self-test
+        run: python selftest.py
+
+      - name: Fuzz against the output contracts
+        run: python fuzz.py -n 1000
+
+      - name: Build
+        run: python build.py
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          # ditto preserves the bundle's symlinks and permissions; zip does not.
+          ditto -c -k --keepParent "Payroll Report.app" "../${{ matrix.artifact }}.zip"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path "dist/Payroll Report.exe" -DestinationPath "${{ matrix.artifact }}.zip"
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: cd dist && tar czf "../${{ matrix.artifact }}.tar.gz" payroll-report
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ matrix.artifact }}.zip
+            ${{ matrix.artifact }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          body: |
+            Download the file for your machine, unzip it, and double-click.
+            No Python or other installation needed.
+
+            - **macOS (Apple Silicon)** — `Payroll-Report-macOS-arm64.zip`
+            - **macOS (Intel)** — `Payroll-Report-macOS-intel.zip`
+            - **Windows 10/11** — `Payroll-Report-Windows.zip`
+            - **Linux** — `Payroll-Report-Linux.tar.gz`
+
+            First launch on macOS: right-click the app and choose **Open**, then
+            **Open** again. Windows may show "Windows protected your PC" — click
+            **More info** > **Run anyway**. Both happen because the app is not
+            code-signed with a paid certificate; they appear once, not every time.
