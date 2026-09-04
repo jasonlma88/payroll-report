@@ -432,7 +432,14 @@ def smoke_test() -> int:
             and written.exists()
             and not errors(validate_all(result))
         )
-    print("smoke test: " + ("OK" if ok else "FAILED"))
+    message = "smoke test: " + ("OK" if ok else "FAILED")
+    # A windowed Windows build may have no stdout at all; the exit code is the
+    # part CI relies on, so never let printing be what fails.
+    try:
+        print(message)
+        sys.stdout.flush()
+    except (AttributeError, ValueError, OSError):
+        pass
     return 0 if ok else 1
 
 

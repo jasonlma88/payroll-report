@@ -57,8 +57,12 @@ jobs:
       - name: Smoke-test the built app (Windows)
         if: runner.os == 'Windows'
         run: |
-          & "dist/Payroll Report.exe" --smoke
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          # A --windowed exe is a GUI-subsystem binary: PowerShell does not wait
+          # on it and never sets $LASTEXITCODE, so ask for the process object.
+          $p = Start-Process -FilePath "dist/Payroll Report.exe" `
+                             -ArgumentList "--smoke" -Wait -PassThru -NoNewWindow
+          Write-Host "exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { exit 1 }
 
       - name: Smoke-test the built app (Linux)
         if: runner.os == 'Linux'
